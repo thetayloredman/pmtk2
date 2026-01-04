@@ -24,6 +24,10 @@ export const Config = type({
         },
     },
     checkRateMs: "number = 30000",
+    aptMonitoring: {
+        enabled: "boolean",
+        checkRateMs: "number = 86400000", // 24h
+    },
 });
 
 export const globalConfig = Config.assert(

@@ -11,6 +11,7 @@ import { globalConfig } from "./config.js";
 import { getCurrentState } from "./state.js";
 import { mergeKeys, guestType } from "./util.js";
 import { getFailingTasksSinceLastCheck } from "./tasks.js";
+import { checkForAptUpdates } from "./apt.js";
 
 const pve = pveClient({ ...globalConfig.proxmox });
 
@@ -151,3 +152,5 @@ setInterval(async () => {
 
     originalState = newState;
 }, globalConfig.checkRateMs);
+
+setInterval(checkForAptUpdates, globalConfig.aptMonitoring.checkRateMs, pve);
