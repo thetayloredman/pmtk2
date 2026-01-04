@@ -12,22 +12,12 @@ PMTK runs as a daemon using the provided systemd service file. To set it up, fol
 npm install
 ```
 
-2. Copy the `pmtk2.service` file to the systemd system directory:
+2. Then use pm2 to start the service:
 
 ```bash
-sudo cp pmtk2.service /etc/systemd/system/
-```
-
-3. Reload the systemd daemon to recognize the new service:
-
-```bash
-sudo systemctl daemon-reload
-```
-
-4. Enable and start the PMTK service:
-
-```bash
-sudo systemctl enable --now pmtk2
+pm2 start --name pmtk2 npm -- start
+pm2 save
+pm2 startup
 ```
 
 ## License
