@@ -1,0 +1,16 @@
+[Unit]
+Description=The Proxmox Monitoring Toolkit 2
+After=network.target
+
+[Service]
+Environment=NODE_ENV=production
+Type=simple
+User=Root
+WorkingDirectory=/root/pmtk2
+ExecStart=/usr/bin/env npm run start
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target
