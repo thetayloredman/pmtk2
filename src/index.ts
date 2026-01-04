@@ -43,44 +43,39 @@ setInterval(async () => {
             const originalVMState = originalNodeState[vmid] || null;
             const newVMState = newNodeState[vmid] || null;
 
-            if (originalVMState === null) {
-                sendAlerts(
-                    `:baby: Guest ${guestType(newVMState.type)} ${vmid} (${
-                        newVMState.name
-                    }) has been created on node ${node} and is currently ${
-                        newVMState.status
-                    }.`
-                );
-                continue;
-            }
+            const type = guestType(originalVMState?.type ?? newVMState?.type);
+            const name = newVMState?.name ?? originalVMState?.name ?? "unknown";
 
-            if (newVMState === null) {
-                sendAlerts(
-                    `:skull: Guest ${guestType(
-                        originalVMState.type
-                    )} ${vmid} (${
-                        originalVMState.name
-                    }) has been deleted from node ${node}.`
-                );
-                continue;
-            }
+            const statusChange = `${originalVMState?.status ?? null} -> ${
+                newVMState?.status ?? null
+            }`;
 
-            if (originalVMState.status !== newVMState.status) {
-                if (
-                    newVMState.status === "running" &&
-                    originalVMState.status === "stopped"
-                ) {
+            switch (statusChange) {
+                case "null -> running":
                     sendAlerts(
-                        `:rocket: Guest ${guestType(
-                            newVMState.type
-                        )} ${vmid} (${
-                            newVMState.name
-                        }) on node ${node} has started.`
+                        `:baby: Guest ${type} ${vmid} (${name}) on node ${node} was created and started.`
                     );
-                } else if (
-                    newVMState.status === "stopped" &&
-                    originalVMState.status === "running"
-                ) {
+                    break;
+
+                case "null -> stopped":
+                    sendAlerts(
+                        `:baby: Guest ${type} ${vmid} (${name}) on node ${node} was created and is currently stopped.`
+                    );
+                    break;
+
+                case "running -> null":
+                case "stopped -> null":
+                    sendAlerts(
+                        `:skull_and_crossbones: Guest ${type} ${vmid} (${name}) on node ${node} has been deleted.`
+                    );
+                    break;
+
+                case "stopped -> running":
+                    sendAlerts(
+                        `:rocket: Guest ${type} ${vmid} (${name}) on node ${node} has started.`
+                    );
+                    break;
+                case "running -> stopped":
                     sendAlerts(
                         `:octagonal_sign: Guest ${guestType(
                             newVMState.type
@@ -88,29 +83,31 @@ setInterval(async () => {
                             newVMState.name
                         }) on node ${node} has stopped.`
                     );
-                } else if (
-                    newVMState.status === "running" &&
-                    originalVMState.status === "running" &&
-                    newVMState.uptime < originalVMState.uptime
-                ) {
-                    sendAlerts(
-                        `:arrows_counterclockwise: Guest ${guestType(
-                            newVMState.type
-                        )} ${vmid} (${
-                            newVMState.name
-                        }) on node ${node} has been restarted.`
-                    );
-                } else {
-                    sendAlerts(
-                        `:warning: Guest ${guestType(
-                            newVMState.type
-                        )} ${vmid} (${
-                            newVMState.name
-                        }) on node ${node} made an unknown state change from ${
-                            originalVMState.status
-                        } to ${newVMState.status}.`
-                    );
-                }
+                    break;
+                case "running -> running":
+                    if (newVMState.uptime < originalVMState.uptime) {
+                        sendAlerts(
+                            `:arrows_counterclockwise: Guest ${guestType(
+                                newVMState.type
+                            )} ${vmid} (${
+                                newVMState.name
+                            }) on node ${node} has been restarted.`
+                        );
+                    }
+                    break;
+                default:
+                    if (originalVMState.status !== newVMState.status) {
+                        sendAlerts(
+                            `:warning: Guest ${guestType(
+                                newVMState.type
+                            )} ${vmid} (${
+                                newVMState.name
+                            }) on node ${node} made an unknown state change from ${
+                                originalVMState.status
+                            } to ${newVMState.status}.`
+                        );
+                    }
+                    break;
             }
         }
     }
