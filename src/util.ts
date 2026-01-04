@@ -22,3 +22,7 @@ export function mergeKeys(
 export function guestType(type: "qemu" | "lxc"): "CT" | "VM" {
     return type === "lxc" ? "CT" : "VM";
 }
+
+export function getSecondEpoch(): number {
+    return Math.floor(Date.now() / 1000);
+}

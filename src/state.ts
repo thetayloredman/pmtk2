@@ -20,6 +20,7 @@ export type NodeState = Record<string, VmState>;
 export type State = Record<string, NodeState>;
 
 export async function getCurrentState(pve: Proxmox.Api): Promise<State> {
+    console.debug("-> Fetching current state from Proxmox API...");
     const state: State = {};
 
     for (const { node: nodeName } of await pve.nodes.$get()) {

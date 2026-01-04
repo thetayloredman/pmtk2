@@ -32,5 +32,6 @@ async function sendDiscordAlert(message: string) {
 }
 
 export default function sendAlerts(message: string) {
+    console.log(`-> Sending alert: ${message}`);
     sendDiscordAlert(message);
 }

@@ -10,15 +10,21 @@ import sendAlerts from "./alerting.js";
 import { globalConfig } from "./config.js";
 import { getCurrentState } from "./state.js";
 import { mergeKeys, guestType } from "./util.js";
+import { getFailingTasksSinceLastCheck } from "./tasks.js";
 
 const pve = pveClient({ ...globalConfig.proxmox });
 
+console.log("Fetching initial state and starting monitoring loop...");
 let originalState = await getCurrentState(pve);
 sendAlerts(
     ":white_check_mark: PMTK2 has started and is monitoring the Proxmox cluster."
 );
 
+console.log(
+    `Will check for state changes every ${globalConfig.checkRateMs}ms.`
+);
 setInterval(async () => {
+    console.log("Checking for state changes...");
     const newState = await getCurrentState(pve);
 
     for (const node of mergeKeys(originalState, newState)) {
@@ -26,6 +32,7 @@ setInterval(async () => {
         let newNodeState = newState[node] || null;
 
         if (originalNodeState === null) {
+            console.log(`Discovered new node ${node}.`);
             sendAlerts(
                 `:pregnant_woman: A new node (${node}) has been added to the cluster.`
             );
@@ -33,6 +40,7 @@ setInterval(async () => {
         }
 
         if (newNodeState === null) {
+            console.log(`Node ${node} disappeared.`);
             sendAlerts(
                 `:fire: Node ${node} has been removed from the cluster.`
             );
@@ -49,6 +57,7 @@ setInterval(async () => {
             const statusChange = `${originalVMState?.status ?? null} -> ${
                 newVMState?.status ?? null
             }`;
+            console.log(`-> For ${type} ${vmid} (${name}): ${statusChange}`);
 
             switch (statusChange) {
                 case "null -> running":
@@ -86,6 +95,9 @@ setInterval(async () => {
                     break;
                 case "running -> running":
                     if (newVMState.uptime < originalVMState.uptime) {
+                        console.log(
+                            "-> Detected a restart based on uptime decrease."
+                        );
                         sendAlerts(
                             `:arrows_counterclockwise: Guest ${guestType(
                                 newVMState.type
@@ -97,6 +109,9 @@ setInterval(async () => {
                     break;
                 default:
                     if (originalVMState.status !== newVMState.status) {
+                        console.error(
+                            `-> Detected an unknown state change ${statusChange}.`
+                        );
                         sendAlerts(
                             `:warning: Guest ${guestType(
                                 newVMState.type
@@ -109,6 +124,28 @@ setInterval(async () => {
                     }
                     break;
             }
+        }
+
+        let recentlyFailedTasks = await getFailingTasksSinceLastCheck(
+            pve,
+            node
+        );
+
+        for (const task of recentlyFailedTasks) {
+            console.log("-> Detected failed task:", task);
+            sendAlerts(
+                `:warning: A task on node ${node} has failed.\n` +
+                    `- UPID: ${task.upid}\n` +
+                    `- VMID: ${task.vmid ?? "N/A"}\n` +
+                    `- Type: ${task.type}\n` +
+                    `- Start Time: ${new Date(
+                        (task.starttime ?? 0) * 1000
+                    ).toLocaleString()}\n` +
+                    `- End Time: ${new Date(
+                        (task.endtime ?? 0) * 1000
+                    ).toLocaleString()}\n` +
+                    `- Status: ${task.status}`
+            );
         }
     }
 
