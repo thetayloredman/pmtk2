@@ -36,7 +36,7 @@ setInterval(async () => {
             sendAlerts(
                 `:fire: Node ${node} has been removed from the cluster.`
             );
-            continue;
+            newNodeState = {};
         }
 
         for (const vmid of mergeKeys(originalNodeState, newNodeState)) {
