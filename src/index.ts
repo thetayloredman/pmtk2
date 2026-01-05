@@ -58,6 +58,16 @@ setInterval(async () => {
             const statusChange = `${originalVMState?.status ?? null} -> ${
                 newVMState?.status ?? null
             }`;
+
+            if (newVMState.lock === "backup") {
+                console.log(
+                    "Skipped VM",
+                    vmid,
+                    "because it is currently being backed up."
+                );
+                continue;
+            }
+
             console.log(`-> For ${type} ${vmid} (${name}): ${statusChange}`);
 
             switch (statusChange) {
