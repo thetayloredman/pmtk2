@@ -25,6 +25,7 @@ console.log(
     `Will check for state changes every ${globalConfig.checkRateMs}ms.`
 );
 setInterval(async () => {
+    try {
     console.log("Checking for state changes...");
     const newState = await getCurrentState(pve);
 
@@ -161,6 +162,9 @@ setInterval(async () => {
     }
 
     originalState = newState;
+    } catch (e) {
+        sendAlerts(':error: An error occurred while checking for state changes:\n' + (e as any).toString());
+    }
 }, globalConfig.checkRateMs);
 
 setInterval(checkForAptUpdates, globalConfig.aptMonitoring.checkRateMs, pve);
