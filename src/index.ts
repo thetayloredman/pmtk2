@@ -60,7 +60,7 @@ setInterval(async () => {
                 newVMState?.status ?? null
             }`;
 
-            if (newVMState.lock === "backup") {
+            if (originalVMState.lock === "backup" || newVMState.lock === "backup") {
                 console.log(
                     "Skipped VM",
                     vmid,
