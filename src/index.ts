@@ -26,144 +26,155 @@ console.log(
 );
 setInterval(async () => {
     try {
-    console.log("Checking for state changes...");
-    const newState = await getCurrentState(pve);
+        console.log("Checking for state changes...");
+        const newState = await getCurrentState(pve);
 
-    for (const node of mergeKeys(originalState, newState)) {
-        let originalNodeState = originalState[node] || null;
-        let newNodeState = newState[node] || null;
+        for (const node of mergeKeys(originalState, newState)) {
+            let originalNodeState = originalState[node] || null;
+            let newNodeState = newState[node] || null;
 
-        if (originalNodeState === null) {
-            console.log(`Discovered new node ${node}.`);
-            sendAlerts(
-                `:pregnant_woman: A new node (${node}) has been added to the cluster.`
-            );
-            originalNodeState = {};
-        }
-
-        if (newNodeState === null) {
-            console.log(`Node ${node} disappeared.`);
-            sendAlerts(
-                `:fire: Node ${node} has been removed from the cluster.`
-            );
-            newNodeState = {};
-        }
-
-        for (const vmid of mergeKeys(originalNodeState, newNodeState)) {
-            const originalVMState = originalNodeState[vmid] || null;
-            const newVMState = newNodeState[vmid] || null;
-
-            const type = guestType(originalVMState?.type ?? newVMState?.type);
-            const name = newVMState?.name ?? originalVMState?.name ?? "unknown";
-
-            const statusChange = `${originalVMState?.status ?? null} -> ${
-                newVMState?.status ?? null
-            }`;
-
-            if (originalVMState.lock === "backup" || newVMState.lock === "backup") {
-                console.log(
-                    "Skipped VM",
-                    vmid,
-                    "because it is currently being backed up."
+            if (originalNodeState === null) {
+                console.log(`Discovered new node ${node}.`);
+                sendAlerts(
+                    `:pregnant_woman: A new node (${node}) has been added to the cluster.`
                 );
-                continue;
+                originalNodeState = {};
             }
 
-            console.log(`-> For ${type} ${vmid} (${name}): ${statusChange}`);
+            if (newNodeState === null) {
+                console.log(`Node ${node} disappeared.`);
+                sendAlerts(
+                    `:fire: Node ${node} has been removed from the cluster.`
+                );
+                newNodeState = {};
+            }
 
-            switch (statusChange) {
-                case "null -> running":
-                    sendAlerts(
-                        `:baby: Guest ${type} ${vmid} (${name}) on node ${node} was created and started.`
-                    );
-                    break;
+            for (const vmid of mergeKeys(originalNodeState, newNodeState)) {
+                const originalVMState = originalNodeState[vmid] || null;
+                const newVMState = newNodeState[vmid] || null;
 
-                case "null -> stopped":
-                    sendAlerts(
-                        `:baby: Guest ${type} ${vmid} (${name}) on node ${node} was created and is currently stopped.`
-                    );
-                    break;
+                const type = guestType(
+                    originalVMState?.type ?? newVMState?.type
+                );
+                const name =
+                    newVMState?.name ?? originalVMState?.name ?? "unknown";
 
-                case "running -> null":
-                case "stopped -> null":
-                    sendAlerts(
-                        `:skull_and_crossbones: Guest ${type} ${vmid} (${name}) on node ${node} has been deleted.`
-                    );
-                    break;
+                const statusChange = `${originalVMState?.status ?? null} -> ${
+                    newVMState?.status ?? null
+                }`;
 
-                case "stopped -> running":
-                    sendAlerts(
-                        `:rocket: Guest ${type} ${vmid} (${name}) on node ${node} has started.`
+                if (
+                    originalVMState?.lock === "backup" ||
+                    newVMState?.lock === "backup"
+                ) {
+                    console.log(
+                        "Skipped VM",
+                        vmid,
+                        "because it is currently being backed up."
                     );
-                    break;
-                case "running -> stopped":
-                    sendAlerts(
-                        `:octagonal_sign: Guest ${guestType(
-                            newVMState.type
-                        )} ${vmid} (${
-                            newVMState.name
-                        }) on node ${node} has stopped.`
-                    );
-                    break;
-                case "running -> running":
-                    if (newVMState.uptime < originalVMState.uptime) {
-                        console.log(
-                            "-> Detected a restart based on uptime decrease."
-                        );
+                    continue;
+                }
+
+                console.log(
+                    `-> For ${type} ${vmid} (${name}): ${statusChange}`
+                );
+
+                switch (statusChange) {
+                    case "null -> running":
                         sendAlerts(
-                            `:arrows_counterclockwise: Guest ${guestType(
+                            `:baby: Guest ${type} ${vmid} (${name}) on node ${node} was created and started.`
+                        );
+                        break;
+
+                    case "null -> stopped":
+                        sendAlerts(
+                            `:baby: Guest ${type} ${vmid} (${name}) on node ${node} was created and is currently stopped.`
+                        );
+                        break;
+
+                    case "running -> null":
+                    case "stopped -> null":
+                        sendAlerts(
+                            `:skull_and_crossbones: Guest ${type} ${vmid} (${name}) on node ${node} has been deleted.`
+                        );
+                        break;
+
+                    case "stopped -> running":
+                        sendAlerts(
+                            `:rocket: Guest ${type} ${vmid} (${name}) on node ${node} has started.`
+                        );
+                        break;
+                    case "running -> stopped":
+                        sendAlerts(
+                            `:octagonal_sign: Guest ${guestType(
                                 newVMState.type
                             )} ${vmid} (${
                                 newVMState.name
-                            }) on node ${node} has been restarted.`
+                            }) on node ${node} has stopped.`
                         );
-                    }
-                    break;
-                default:
-                    if (originalVMState.status !== newVMState.status) {
-                        console.error(
-                            `-> Detected an unknown state change ${statusChange}.`
-                        );
-                        sendAlerts(
-                            `:warning: Guest ${guestType(
-                                newVMState.type
-                            )} ${vmid} (${
-                                newVMState.name
-                            }) on node ${node} made an unknown state change from ${
-                                originalVMState.status
-                            } to ${newVMState.status}.`
-                        );
-                    }
-                    break;
+                        break;
+                    case "running -> running":
+                        if (newVMState.uptime < originalVMState.uptime) {
+                            console.log(
+                                "-> Detected a restart based on uptime decrease."
+                            );
+                            sendAlerts(
+                                `:arrows_counterclockwise: Guest ${guestType(
+                                    newVMState.type
+                                )} ${vmid} (${
+                                    newVMState.name
+                                }) on node ${node} has been restarted.`
+                            );
+                        }
+                        break;
+                    default:
+                        if (originalVMState.status !== newVMState.status) {
+                            console.error(
+                                `-> Detected an unknown state change ${statusChange}.`
+                            );
+                            sendAlerts(
+                                `:warning: Guest ${guestType(
+                                    newVMState.type
+                                )} ${vmid} (${
+                                    newVMState.name
+                                }) on node ${node} made an unknown state change from ${
+                                    originalVMState.status
+                                } to ${newVMState.status}.`
+                            );
+                        }
+                        break;
+                }
             }
-        }
 
-        let recentlyFailedTasks = await getFailingTasksSinceLastCheck(
-            pve,
-            node
-        );
-
-        for (const task of recentlyFailedTasks) {
-            console.log("-> Detected failed task:", task);
-            sendAlerts(
-                `:warning: A task on node ${node} has failed.\n` +
-                    `- UPID: ${task.upid}\n` +
-                    `- VMID: ${task.vmid ?? "N/A"}\n` +
-                    `- Type: ${task.type}\n` +
-                    `- Start Time: ${new Date(
-                        (task.starttime ?? 0) * 1000
-                    ).toLocaleString()}\n` +
-                    `- End Time: ${new Date(
-                        (task.endtime ?? 0) * 1000
-                    ).toLocaleString()}\n` +
-                    `- Status: ${task.status}`
+            let recentlyFailedTasks = await getFailingTasksSinceLastCheck(
+                pve,
+                node
             );
-        }
-    }
 
-    originalState = newState;
+            for (const task of recentlyFailedTasks) {
+                console.log("-> Detected failed task:", task);
+                sendAlerts(
+                    `:warning: A task on node ${node} has failed.\n` +
+                        `- UPID: ${task.upid}\n` +
+                        `- VMID: ${task.vmid ?? "N/A"}\n` +
+                        `- Type: ${task.type}\n` +
+                        `- Start Time: ${new Date(
+                            (task.starttime ?? 0) * 1000
+                        ).toLocaleString()}\n` +
+                        `- End Time: ${new Date(
+                            (task.endtime ?? 0) * 1000
+                        ).toLocaleString()}\n` +
+                        `- Status: ${task.status}`
+                );
+            }
+        }
+
+        originalState = newState;
     } catch (e) {
-        sendAlerts(':error: An error occurred while checking for state changes:\n' + (e as any).toString());
+        sendAlerts(
+            ":error: An error occurred while checking for state changes:\n" +
+                (e as any).toString()
+        );
     }
 }, globalConfig.checkRateMs);
 
