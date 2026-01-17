@@ -25,12 +25,12 @@ export const Config = type({
     },
     checkRateMs: "number = 30000",
     aptMonitoring: {
-        enabled: "boolean",
+        enabled: "boolean = true",
         checkRateMs: "number = 86400000", // 24h
     },
     pveTaskMonitoring: {
-        enabled: "boolean",
-        ignoreTypes: "string[]",
+        enabled: "boolean = true",
+        ignoreTypes: type("string[]").default(() => ["vncproxy"]),
     },
 });
 
