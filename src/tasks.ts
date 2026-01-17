@@ -7,6 +7,7 @@
 
 import { getSecondEpoch } from "./util.js";
 import { Proxmox } from "proxmox-api";
+import { globalConfig } from "./config.js";
 
 // we just started, so track since initialization
 let lastTaskCheck = getSecondEpoch();
@@ -15,10 +16,16 @@ export async function getFailingTasksSinceLastCheck(
     pve: Proxmox.Api,
     node: string
 ): Promise<Proxmox.nodesTasksNodeTasks[]> {
+    if (globalConfig.pveTaskMonitoring.enabled === false) return [];
+
     let allTasks = await pve.nodes.$(node).tasks.$get({});
 
     let filteredTasks = allTasks.filter((task) => {
-        return (task.endtime ?? 0) >= lastTaskCheck && task.status !== "OK";
+        return (
+            (task.endtime ?? 0) >= lastTaskCheck &&
+            task.status !== "OK" &&
+            !globalConfig.pveTaskMonitoring.ignoreTypes.includes(task.type)
+        );
     });
 
     // update last check time

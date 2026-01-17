@@ -28,6 +28,10 @@ export const Config = type({
         enabled: "boolean",
         checkRateMs: "number = 86400000", // 24h
     },
+    pveTaskMonitoring: {
+        enabled: "boolean",
+        ignoreTypes: "string[]",
+    },
 });
 
 export const globalConfig = Config.assert(
